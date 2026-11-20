@@ -1,0 +1,31 @@
+# rtlnet_h264_enc_core synthesizable sources without the High profile stand-in, compile order (paths relative to the repository root).
+-f cores/rtlnet_common/hdl/rtlnet_common.f
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_pkg.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_c422to420.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_bitpack.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_rd_dma.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_cinterp.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_sad16.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_cavlc_tab.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_cavlc_blk.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mb_cavlc.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_fwdq.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_invq.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_dcq_luma.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_dcq_chroma.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_ipred.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mvpred.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mvpred_s1.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mvpred_s2.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mvpred_s3.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mvctx.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_search.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_mb_enc.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_recon_wr.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_dbk_line.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_deblock.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_wr_master.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_ring_wr.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_engine.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_enc_regs.sv
+ip/rtlnet_h264_enc/hdl/rtlnet_h264_top.sv
