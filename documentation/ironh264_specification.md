@@ -4,19 +4,20 @@
 .markdown-body td,.markdown-body th { padding:4px 7px; }
 .markdown-body img { display:block; max-width:100%; margin:0 auto; }
 .markdown-body .brief-brand img { margin:0; }
+.markdown-body img[src$="architecture.png"] { width:85%; height:auto; }
 </style>
 
 <div class="brief-page">
 
 <div class="brief-brand"><img src="assets/ironkernel_logo.png" alt="IronKernel Embedded"></div>
 
-# IronH264 specification
+# IronH264 Specification
 
 <div class="brief-band">IronH264 is a bus-mastering H.264 Constrained Baseline encoder for FPGA video systems. It reads packed YUYV frames from DDR, reconstructs reference pictures and writes an indexed Annex B bitstream back to memory.</div>
 
-Software submits a picture and supplies its sequence and picture parameter sets. The FPGA performs prediction, motion search, transform, quantization, entropy coding and reconstruction. Software can pass the compressed access unit to a recorder or network transport.
+**Markdown design guide for AI-assisted integration.** Use the repository README with Claude or Codex to integrate the encoder RTL, allocate DDR buffers, and trace an encoded picture through firmware or the Linux driver.
 
-![IronH264 memory and encoding data path](assets/architecture.svg)
+![IronH264 memory and encoding data path](assets/architecture.png)
 
 | Interface | Contract |
 |---|---|
@@ -32,6 +33,8 @@ Software submits a picture and supplies its sequence and picture parameter sets.
 <div class="brief-page">
 
 ## Picture processing and stream assembly
+
+Software submits a picture and supplies its sequence and picture parameter sets. The FPGA performs prediction, motion search, transform, quantization, entropy coding and reconstruction. Software can pass the compressed access unit to a recorder or network transport.
 
 **Input and prediction.** A read DMA fetches strips of macroblocks from packed DDR rows. Each pixel pair arrives as Y0, Cb, Y1, Cr. The encoder passes luma through and averages chroma vertically over adjacent rows to form 4:2:0. Intra prediction uses the current picture. For P pictures, motion search reads the previous reconstructed picture and tests inter prediction.
 
