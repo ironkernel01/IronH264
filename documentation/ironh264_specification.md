@@ -45,7 +45,7 @@ Software submits a picture and supplies its sequence and picture parameter sets.
 | Implementation | Parallelism and memory interface |
 |---|---|
 | Configurable encoder top | One to four engines partition the picture into bands. The slice count must be a multiple of the engine count. The underlying memory interface supports 64- or 128-bit configurations. |
-| Zybo AXI wrapper | One engine with a 64-bit AXI master. On the Linux reference, HP3 runs at 90 MHz. IronCapture writes the input independently on HP2. |
+| Zybo AXI wrapper | One engine with a 64-bit AXI master. On the Linux reference, the 1080p30 configuration clocks HP3 and the encoder at 121.85 MHz. IronCapture writes the input independently on HP2. |
 
 A 1920 × 1080 picture has 120 × 68 coded macroblocks. Picture rate depends on content, engine count, encoder clock, QP and memory service. The Linux reference submits each valid captured picture. Receiver timestamps give the delivered picture rate.
 
@@ -109,18 +109,19 @@ The Linux adapter accepts 720p and 1080p at a stride of twice the width. Its ref
 
 ### Physical camera over Gigabit Ethernet
 
-With external 5 V power, the Pcam 5C supplied the 1920 × 1080 input while Linux read 1 GiB from USB mass storage and continued 1080p60 HDMI scanout. The application offered every valid dequeued picture to the single 90 MHz engine.
+The Pcam 5C supplied 1920 × 1080 YUYV video to a single encoder. During each run, the externally powered Zybo drove 1080p60 HDMI from DDR and read 1 GiB from USB storage. The receiver measured picture cadence from capture timestamps carried in MPEG-TS.
 
-| Stream measurement | Physical camera result |
-|---|---:|
-| Encoder completions / pictures decoded from the VLC recording | 1,800 / 1,800 |
-| First-to-last presentation timestamp span | 76.57 s |
-| Delivered picture rate / target | 23.50 / 30 pictures/s |
-| Annex B H.264 data | 140,071,406 bytes · 14.63 Mb/s |
-| MPEG-TS UDP payload | 144,013,264 bytes · 15.04 Mb/s |
-| HDMI underruns / HDMI read errors / capture DMA errors | 0 / 0 / 0 |
+| Physical camera measurement | 90 MHz encoder | 121.85 MHz encoder |
+|---|---:|---:|
+| Pictures encoded / decoded | 1,800 / 1,800 | 1,800 / 1,800 |
+| First-to-last timestamp span | 76.567 s | 59.967 s |
+| Delivered pictures/s | 23.50 | **30.00** |
+| H.264 elementary stream | 14.63 Mb/s | 20.45 Mb/s |
+| MPEG-TS UDP payload | 15.04 Mb/s | 21.02 Mb/s |
+| TS continuity errors / capture DMA errors | 0 / 0 | 0 / 0 |
+| HDMI underruns / HDMI DDR read errors | 0 / 0 | 0 / 0 |
 
-The last picture took 3,605,686 encoder clocks, or 40.06 ms. A 30 pictures/s stream allows 33.33 ms per picture. The bitrates are averages for the captured scene at QP 28. FFmpeg decoded the complete recording with its exit-on-error check enabled.
+At 121.85 MHz, FFmpeg decoded 60 I pictures and 1,740 P pictures with its exit-on-error check enabled. The median picture interval was 33.333 ms and the longest was 33.722 ms. Bitrates are averages for the measured scene at QP 28.
 
 </div>
 
