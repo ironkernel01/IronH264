@@ -5,7 +5,7 @@
 // Overview:
 //   * Stage 1 registers the samples and the decisions that need the whole line: filterSamplesFlag (bS != 0, |p0 - q0| < alpha,
 //     |p1 - p0| < beta, |q1 - q0| < beta), ap < beta and aq < beta (luma), the bS = 4 strong condition |p0 - q0| < (alpha >> 2) + 2, tC for
-//     bS < 4 (luma tC0 + (ap < beta) + (aq < beta), chroma tC0 + 1), the unclipped delta and the p1 / q1 corrections of clause 8.7.2.3.
+//     bS < 4 (luma tC0 + (ap < beta) + (aq < beta), chroma tC0 + 1), the unclipped delta and the targets and bounds for the p1 / q1 corrections of clause 8.7.2.3.
 //   * Stage 2 selects and clips: bS < 4 modifies p0 and q0 (and p1, q1 of luma when ap or aq < beta); bS = 4 the strong or the weak
 //     filter of luma, the chroma filter of chroma. Samples a line does not modify pass through.
 //   * chroma = 1: the line is a chroma line: only p0 and q0 are modified, tC = tC0 + 1 for bS < 4.
@@ -47,16 +47,25 @@ module rtlnet_h264_dbk_line (
   logic [7:0]  p1r [4];
   logic [7:0]  q1r [4];
   logic [5:0]  tc1;
-  logic [4:0]  tc0_1;
-  logic signed [9:0]  dl1;      // unclipped delta
-  logic signed [9:0]  dp1_1;    // p1 correction of bS < 4 (clipped to tc0)
-  logic signed [9:0]  dq1_1;
+  logic signed [9:0] dl1;       // unclipped delta
+  logic [7:0] p_target1, q_target1;
+  logic signed [9:0] p_lo1, p_hi1, q_lo1, q_hi1;
+
+  // Adding the original sample after clipping a correction is equivalent to
+  // clipping its target between sample-tc0 and sample+tc0. Register the
+  // independent target and bounds before comparing them in the write stage.
+  function automatic logic [7:0] clip_target(input logic [7:0] target,
+      input logic signed [9:0] lo, input logic signed [9:0] hi);
+    logic signed [9:0] value;
+    value = $signed({2'b00, target});
+    return (value < lo) ? lo[7:0] : (value > hi) ? hi[7:0] : target;
+  endfunction
 
   // Stage 1 combinational.
   int p0, p1, p2, q0, q1, q2;
   // Wide integer intermediates: only the low bits reach the registers.
   /* verilator lint_off UNUSEDSIGNAL */
-  int ap_v, aq_v, tcv, dl, dpv, dqv;
+  int ap_v, aq_v, tcv, dl;
   /* verilator lint_on UNUSEDSIGNAL */
   logic fsf_c, apl_c, aql_c, small_c;
 
@@ -71,8 +80,6 @@ module rtlnet_h264_dbk_line (
     small_c = (iabs(p0 - q0) < ((int'(alpha) >> 2) + 2));
     tcv     = chroma ? (int'(tc0) + 1) : (int'(tc0) + (apl_c ? 1 : 0) + (aql_c ? 1 : 0));
     dl      = (((q0 - p0) << 2) + (p1 - q1) + 4) >>> 3;
-    dpv     = clip3(-int'(tc0), int'(tc0), (p2 + ((p0 + q0 + 1) >> 1) - (p1 << 1)) >>> 1);
-    dqv     = clip3(-int'(tc0), int'(tc0), (q2 + ((p0 + q0 + 1) >> 1) - (q1 << 1)) >>> 1);
   end
 
   always_ff @(posedge clk) begin
@@ -93,10 +100,13 @@ module rtlnet_h264_dbk_line (
         q1r[i] <= q_i[8*i +: 8];
       end
       tc1   <= 6'(tcv);
-      tc0_1 <= tc0;
-      dl1   <= 10'(dl);
-      dp1_1 <= 10'(dpv);
-      dq1_1 <= 10'(dqv);
+      dl1       <= 10'(dl);
+      p_target1 <= 8'(((p2 << 1) + p0 + q0 + 1) >> 2);
+      q_target1 <= 8'(((q2 << 1) + p0 + q0 + 1) >> 2);
+      p_lo1 <= 10'(p1 - int'(tc0));
+      p_hi1 <= 10'(p1 + int'(tc0));
+      q_lo1 <= 10'(q1 - int'(tc0));
+      q_hi1 <= 10'(q1 + int'(tc0));
     end
   end
 
@@ -118,8 +128,8 @@ module rtlnet_h264_dbk_line (
         dd    = clip3(-int'(tc1), int'(tc1), int'(dl1));
         np[0] = 8'(clip1(sp0 + dd));
         nq[0] = 8'(clip1(sq0 - dd));
-        if (!chroma1 && apl1) np[1] = 8'(sp1 + int'(dp1_1));
-        if (!chroma1 && aql1) nq[1] = 8'(sq1 + int'(dq1_1));
+        if (!chroma1 && apl1) np[1] = clip_target(p_target1, p_lo1, p_hi1);
+        if (!chroma1 && aql1) nq[1] = clip_target(q_target1, q_lo1, q_hi1);
       end else if (chroma1) begin
         np[0] = 8'((2 * sp1 + sp0 + sq1 + 2) >> 2);
         nq[0] = 8'((2 * sq1 + sq0 + sp1 + 2) >> 2);
@@ -141,9 +151,6 @@ module rtlnet_h264_dbk_line (
       end
     end
   end
-
-  logic unused_ok;
-  assign unused_ok = &{1'b0, chroma1, tc0_1};
 
   always_ff @(posedge clk) begin
     if (!resetn) begin

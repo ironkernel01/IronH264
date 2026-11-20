@@ -343,6 +343,8 @@ module rtlnet_h264_ipred (
   logic [1:0]  q0_plane, q0_seg;
   logic [3:0]  q0_y;
   logic [31:0] q0_src, q0_ref;
+  logic signed [12:0] sel_b, sel_c;
+  logic signed [19:0] sel_k;
   always_ff @(posedge clk) begin
     if (!resetn) begin
       q0_valid <= 1'b0; q0_acc <= 1'b0;
@@ -350,6 +352,13 @@ module rtlnet_h264_ipred (
       q0_valid <= q_valid;
       q0_acc   <= q_acc;
     end
+    // Coefficients are stable after prep_done. Select them alongside the
+    // query coordinates so the DSP never sees a plane mux on its input.
+    case (q_plane)
+      2'd0:    begin sel_b <= pb[0]; sel_c <= pc[0]; sel_k <= pk0[0]; end
+      2'd1:    begin sel_b <= pb[1]; sel_c <= pc[1]; sel_k <= pk0[1]; end
+      default: begin sel_b <= pb[2]; sel_c <= pc[2]; sel_k <= pk0[2]; end
+    endcase
     q0_plane <= q_plane;
     q0_seg   <= q_seg;
     q0_y     <= q_y;
@@ -364,19 +373,12 @@ module rtlnet_h264_ipred (
   logic [31:0] q1_top, q1_src, q1_ref;
   logic [7:0]  q1_left, q1_dc;
 
-  logic signed [12:0] sel_b, sel_c;
-  logic signed [19:0] sel_k;
   logic signed [17:0] pcy, pbx;
   logic [7:0]  l_byte, dc_byte;
   logic [31:0] t_seg;
   logic [4:0]  xo;
 
   always_comb begin
-    case (q0_plane)
-      2'd0:    begin sel_b = pb[0]; sel_c = pc[0]; sel_k = pk0[0]; end
-      2'd1:    begin sel_b = pb[1]; sel_c = pc[1]; sel_k = pk0[1]; end
-      default: begin sel_b = pb[2]; sel_c = pc[2]; sel_k = pk0[2]; end
-    endcase
     xo  = {1'b0, q0_seg, 2'b00};
     pcy = sel_c * $signed({1'b0, q0_y});
     pbx = sel_b * $signed(xo);
