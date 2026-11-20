@@ -1148,7 +1148,7 @@ Per engine the search stage costs about 2,800 LUT (SAD unit, chroma interpolator
 
 The High profile tools (CABAC entropy coding, 8x8 transform) are a separate licensed product delivered as a netlist of one module,
 `rtlnet_h264_hp`, one instance per engine. This repository holds only the seam; the module's source, its specification and its netlist build are
-in the High profile repository (`H264HighProfile`).
+in the High profile repository (`ironh264_highprofile`).
 
 ### 17.1 Seam
 
@@ -1196,7 +1196,7 @@ is its Constrained Baseline form). `encoder profile high` is accepted when the n
 | Value | Build |
 |---|---|
 | `none` (default) | `HIGH_PROFILE` 0, the stand-in is not used, the flow is the Constrained Baseline image's, unchanged |
-| `full` | `HIGH_PROFILE` 1 with the netlist of the unlimited-license variant, taken from `H264HighProfile\netlist\full` (or `$env:H264_HIGHPROFILE_ROOT`) |
+| `full` | `HIGH_PROFILE` 1 with the netlist of the unlimited-license variant, taken from `ironh264_highprofile\netlist\full` (or `$env:H264_HIGHPROFILE_ROOT`) |
 | `demo` | `HIGH_PROFILE` 1 with the netlist of the variant whose license ends 30 minutes after FPGA configuration |
 
 The build stops when the netlist is missing. `build_info.txt` names the variant, the tool set (`hp_tools`) and the netlist's `netlist_info.txt`. `-HpTools cabac|t8|all` (default `all`, with `-HighProfile full|demo`) chooses the tool set: it picks the netlist (`netlist\<variant>` for `all`, `netlist\<variant>_<tools>` for the others) and sets `HP_T8` and `HP_T8_AUTO` of the encoder to match (section 17.9).
