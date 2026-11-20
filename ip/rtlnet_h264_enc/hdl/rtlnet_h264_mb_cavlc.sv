@@ -275,11 +275,16 @@ module rtlnet_h264_mb_cavlc #(
     end
   end
 
-  // Number of non-zero levels of the block (TotalCoeff): known at dispatch, so nC of the following block does not wait
-  // for the block coder.
+  // Count each 48-bit RAM return while it enters the reader buffer. The
+  // reader holds this total for dispatch. AC-only blocks omit the DC lane
+  // of their first word; zigzag reordering does not change TotalCoeff.
+  logic [2:0] word_nonzero;
+  logic ac_only;
+  assign ac_only = !((rs == 0) || (inter_q && rs <= 16) || rs == 17 || rs == 18);
   always_comb begin
-    pc_blk = 5'd0;
-    for (int k = 0; k < 16; k++) pc_blk = pc_blk + 5'(blk_coef[12*k +: 12] != 12'd0);
+    word_nonzero = 3'((cram_rd_data[11:0] != 0) && !(ac_only && rd_i_q == 0));
+    for (int i = 1; i < 4; i++)
+      word_nonzero = word_nonzero + 3'(cram_rd_data[12*i +: 12] != 0);
   end
 
   // ---------------------------------------------------------------------------
@@ -432,6 +437,7 @@ module rtlnet_h264_mb_cavlc #(
       rbuf    <= '0;
       rvalid  <= 1'b0;
       r_item  <= '0;
+      pc_blk  <= '0;
       bsel    <= 1'b0;
       nsel    <= 1'b0;
       act     <= '0;
@@ -460,7 +466,11 @@ module rtlnet_h264_mb_cavlc #(
         tl_c[2] <= ln_rd_data[30 +: 5];
         tl_c[3] <= ln_rd_data[35 +: 5];
       end
-      if (rd_v_q) rbuf[48*rd_i_q +: 48] <= cram_rd_data;
+      if (rd_v_q) begin
+        rbuf[48*rd_i_q +: 48] <= cram_rd_data;
+        if (rd_i_q == 0) pc_blk <= 5'(word_nonzero);
+        else             pc_blk <= pc_blk + 5'(word_nonzero);
+      end
 
       // Reader.
       case (rst)

@@ -46,7 +46,7 @@ module rtlnet_h264_dbk_line (
   logic        chroma1, fsf1, bs4_1, apl1, aql1, small1;
   logic [7:0]  p1r [4];
   logic [7:0]  q1r [4];
-  logic [5:0]  tc1;
+  logic [5:0]  tc_base1, tc_plus1, tc_plus2;
   logic signed [9:0] dl1;       // unclipped delta
   logic [7:0] p_target1, q_target1;
   logic signed [9:0] p_lo1, p_hi1, q_lo1, q_hi1;
@@ -65,7 +65,7 @@ module rtlnet_h264_dbk_line (
   int p0, p1, p2, q0, q1, q2;
   // Wide integer intermediates: only the low bits reach the registers.
   /* verilator lint_off UNUSEDSIGNAL */
-  int ap_v, aq_v, tcv, dl;
+  int ap_v, aq_v, dl;
   /* verilator lint_on UNUSEDSIGNAL */
   logic fsf_c, apl_c, aql_c, small_c;
 
@@ -78,7 +78,6 @@ module rtlnet_h264_dbk_line (
     apl_c   = (ap_v < int'(beta));
     aql_c   = (aq_v < int'(beta));
     small_c = (iabs(p0 - q0) < ((int'(alpha) >> 2) + 2));
-    tcv     = chroma ? (int'(tc0) + 1) : (int'(tc0) + (apl_c ? 1 : 0) + (aql_c ? 1 : 0));
     dl      = (((q0 - p0) << 2) + (p1 - q1) + 4) >>> 3;
   end
 
@@ -99,7 +98,9 @@ module rtlnet_h264_dbk_line (
         p1r[i] <= p_i[8*i +: 8];
         q1r[i] <= q_i[8*i +: 8];
       end
-      tc1   <= 6'(tcv);
+      tc_base1 <= {1'b0, tc0};
+      tc_plus1 <= {1'b0, tc0} + 6'd1;
+      tc_plus2 <= {1'b0, tc0} + 6'd2;
       dl1       <= 10'(dl);
       p_target1 <= 8'(((p2 << 1) + p0 + q0 + 1) >> 2);
       q_target1 <= 8'(((q2 << 1) + p0 + q0 + 1) >> 2);
@@ -111,6 +112,9 @@ module rtlnet_h264_dbk_line (
   end
 
   // Stage 2.
+  logic [5:0] tc1;
+  assign tc1 = chroma1 ? tc_plus1 : (apl1 && aql1) ? tc_plus2 :
+                                    (apl1 || aql1) ? tc_plus1 : tc_base1;
   logic [7:0] np [4];
   logic [7:0] nq [4];
   int sp0, sp1, sp2, sp3, sq0, sq1, sq2, sq3, dd;

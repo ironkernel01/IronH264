@@ -459,48 +459,49 @@ module rtlnet_h264_ipred (
   // ---------------------------------------------------------------------------
   logic        s3_v;
   logic        s3_luma;
-  logic [10:0] s3_sad [4];
-  logic [10:0] s3_sad_i;
+  logic [8:0]  s3_pair [4][2];
+  logic [8:0]  s3_pair_i [2];
   logic [17:0] acc_iy, acc_ic;
   logic [17:0] acc_y [4];
   logic [17:0] acc_c [4];
 
-  function automatic logic [10:0] sad4(input logic [31:0] a, input logic [31:0] b);
-    logic [10:0] s;
-    s = 11'd0;
-    for (int k = 0; k < 4; k++) begin
-      if (a[8*k +: 8] >= b[8*k +: 8]) s = s + 11'(a[8*k +: 8] - b[8*k +: 8]);
-      else                            s = s + 11'(b[8*k +: 8] - a[8*k +: 8]);
-    end
-    return s;
+  // Split the four samples across two registered partial sums. The
+  // accumulator combines both halves on its existing update edge.
+  function automatic logic [8:0] sad2(input logic [15:0] a, input logic [15:0] b);
+    logic [7:0] hi, lo;
+    hi = (a[15:8] >= b[15:8]) ? a[15:8] - b[15:8] : b[15:8] - a[15:8];
+    lo = (a[7:0] >= b[7:0]) ? a[7:0] - b[7:0] : b[7:0] - a[7:0];
+    return {1'b0, hi} + {1'b0, lo};
   endfunction
 
   always_ff @(posedge clk) begin
     if (!resetn) begin
-      s3_v <= 1'b0; s3_luma <= 1'b0; s3_sad_i <= '0; acc_iy <= '0; acc_ic <= '0;
+      s3_v <= 1'b0; s3_luma <= 1'b0; s3_pair_i <= '{default:'0}; acc_iy <= '0; acc_ic <= '0;
       for (int m = 0; m < 4; m++) begin
-        s3_sad[m] <= '0; acc_y[m] <= '0; acc_c[m] <= '0;
+        s3_pair[m] <= '{default:'0}; acc_y[m] <= '0; acc_c[m] <= '0;
       end
     end else begin
       s3_v    <= q2_acc;
       s3_luma <= q2_luma;
       for (int m = 0; m < 4; m++) begin
-        s3_sad[m] <= sad4(p_px[32*m +: 32], q2_src);
+        for (int h = 0; h < 2; h++)
+          s3_pair[m][h] <= sad2(p_px[32*m + 16*h +: 16], q2_src[16*h +: 16]);
       end
-      s3_sad_i <= sad4(q2_ref, q2_src);
+      for (int h = 0; h < 2; h++)
+        s3_pair_i[h] <= sad2(q2_ref[16*h +: 16], q2_src[16*h +: 16]);
       if (nb_load) begin
         acc_iy <= '0; acc_ic <= '0;
         for (int m = 0; m < 4; m++) begin
           acc_y[m] <= '0; acc_c[m] <= '0;
         end
       end else if (s3_v) begin
-        if (s3_luma) acc_iy <= acc_iy + 18'(s3_sad_i);
-        else         acc_ic <= acc_ic + 18'(s3_sad_i);
+        if (s3_luma) acc_iy <= acc_iy + 18'(s3_pair_i[0]) + 18'(s3_pair_i[1]);
+        else         acc_ic <= acc_ic + 18'(s3_pair_i[0]) + 18'(s3_pair_i[1]);
         for (int m = 0; m < 4; m++) begin
           if (s3_luma) begin
-            if (leg_y[m]) acc_y[m] <= acc_y[m] + 18'(s3_sad[m]);
+            if (leg_y[m]) acc_y[m] <= acc_y[m] + 18'(s3_pair[m][0]) + 18'(s3_pair[m][1]);
           end else begin
-            if (leg_c[m]) acc_c[m] <= acc_c[m] + 18'(s3_sad[m]);
+            if (leg_c[m]) acc_c[m] <= acc_c[m] + 18'(s3_pair[m][0]) + 18'(s3_pair[m][1]);
           end
         end
       end
