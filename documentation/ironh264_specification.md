@@ -47,7 +47,7 @@ Software submits a picture and supplies its sequence and picture parameter sets.
 | Configurable encoder top | One to four engines partition the picture into bands. The slice count must be a multiple of the engine count. The underlying memory interface supports 64- or 128-bit configurations. |
 | Zybo AXI wrapper | One engine with a 64-bit AXI master. On the Linux reference, HP3 runs at 90 MHz. IronCapture writes the input independently on HP2. |
 
-A 1920 × 1080 picture has 120 × 68 coded macroblocks. Picture rate depends on content, engine count, encoder clock, QP and memory service. Capture at 30 frames/s and encoding at 15 pictures/s are separate rates in the Zybo demonstration.
+A 1920 × 1080 picture has 120 × 68 coded macroblocks. Picture rate depends on content, engine count, encoder clock, QP and memory service. The Linux reference submits each valid captured picture. Receiver timestamps give the delivered picture rate.
 
 </div>
 
@@ -107,9 +107,20 @@ The reference connects IronH264 at `0x43C40000` with GIC SPI 35. An application 
 
 The Linux adapter accepts 720p and 1080p at a stride of twice the width. Its reference settings are four slices, QP 28 and an IDR every 30 submitted pictures. It inserts parameter sets at IDR pictures. The standalone `ironforge-stream` application timestamps and packetizes the output as MPEG-TS over UDP for VLC.
 
-<img src="assets/zybo-stream.png" alt="Zybo Linux dashboard during internal-pattern capture and Baseline encoding" style="max-height:5.8in; width:auto; max-width:100%;">
+### Physical camera over Gigabit Ethernet
 
-**Reference measurement.** VLC received 1,800 pictures in a two-minute 1080p15 run and FFmpeg decoded the recording. A separate 720p30 run delivered all 180 pictures. The input was IronCapture’s internal pattern. In a 90-second sample, capture ran at 30.0 frames/s alongside 60.0 HDMI frames/s, with zero capture DMA errors and zero HDMI underruns.
+With external 5 V power, the Pcam 5C supplied the 1920 × 1080 input while Linux read 1 GiB from USB mass storage and continued 1080p60 HDMI scanout. The application offered every valid dequeued picture to the single 90 MHz engine.
+
+| Stream measurement | Physical camera result |
+|---|---:|
+| Encoder completions / pictures decoded from the VLC recording | 1,800 / 1,800 |
+| First-to-last presentation timestamp span | 76.57 s |
+| Delivered picture rate / target | 23.50 / 30 pictures/s |
+| Annex B H.264 data | 140,071,406 bytes · 14.63 Mb/s |
+| MPEG-TS UDP payload | 144,013,264 bytes · 15.04 Mb/s |
+| HDMI underruns / HDMI read errors / capture DMA errors | 0 / 0 / 0 |
+
+The last picture took 3,605,686 encoder clocks, or 40.06 ms. A 30 pictures/s stream allows 33.33 ms per picture. The bitrates are averages for the captured scene at QP 28. FFmpeg decoded the complete recording with its exit-on-error check enabled.
 
 </div>
 
