@@ -271,9 +271,7 @@ static int encoder_probe(struct platform_device *pdev)
 		return PTR_ERR(e->regs);
 	if (rtlnet_h264_enc_probe((uintptr_t)e->regs, &caps) || caps.num_engines != 1 || !caps.irq)
 		return -ENODEV;
-	e->high = device_property_read_bool(dev, "ironkernel,high-profile");
-	if (e->high != !!caps.hp_seam)
-		return -ENODEV;
+	e->high = caps.hp_seam;
 	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
 	if (ret)
 		return ret;
